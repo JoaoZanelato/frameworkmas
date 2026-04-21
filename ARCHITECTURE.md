@@ -138,17 +138,17 @@ def build_graph(llm: BaseChatModel | None = None):
 
 ```
 # .env
-OLLAMA_BASE_URL=http://localhost:11434       # Ollama local
-OLLAMA_BASE_URL=http://192.168.x.x:11434    # Ollama no PC com GPU (RTX 4060)
+OLLAMA_BASE_URL=http://localhost:11434        # Ollama local
+OLLAMA_BASE_URL=http://192.168.0.200:11434   # Ollama no PC com GPU (RTX 4060 — Windows)
 ```
 
-Para expor o Ollama na rede local (no PC com GPU):
-```bash
-sudo systemctl edit ollama
-# adicionar:
-# [Service]
-# Environment="OLLAMA_HOST=0.0.0.0:11434"
-sudo systemctl daemon-reload && sudo systemctl restart ollama
+Para expor o Ollama na rede local (PC com GPU — Windows):
+1. Abrir "Editar variáveis de ambiente do sistema"
+2. Criar variável de sistema: `OLLAMA_HOST` = `0.0.0.0`
+3. Reiniciar o Ollama
+4. Liberar porta no firewall (PowerShell como Admin):
+```powershell
+New-NetFirewallRule -DisplayName "Ollama" -Direction Inbound -Protocol TCP -LocalPort 11434 -Action Allow
 ```
 
 ---
