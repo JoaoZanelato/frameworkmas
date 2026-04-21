@@ -1,7 +1,9 @@
 from typing import Literal
 
 from langchain_core.language_models import BaseChatModel
-from langchain_openai import ChatOpenAI
+import os
+
+from langchain_ollama import ChatOllama
 from langgraph.graph import StateGraph, START, END
 
 from state import AgentState
@@ -25,7 +27,8 @@ def build_graph(llm: BaseChatModel | None = None):
     Aceita um LLM externo para facilitar a injeção de mocks em testes.
     """
     if llm is None:
-        llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.0)
+        base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+        llm = ChatOllama(model="qwen2.5:7b", base_url=base_url, temperature=0.0)
 
     builder = StateGraph(AgentState)
 

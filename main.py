@@ -1,7 +1,7 @@
 """
 Ponto de entrada do Sistema Multiagente MAS.
 Execução: python main.py
-Requisito: arquivo .env com OPENAI_API_KEY preenchida.
+Requisito: variável OLLAMA_BASE_URL no .env (padrão: http://localhost:11434).
 """
 from dotenv import load_dotenv
 

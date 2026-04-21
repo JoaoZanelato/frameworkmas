@@ -46,3 +46,12 @@ Ao me auxiliar na escrita do código neste projeto, você deve seguir estas dire
 2. **Sem Alucinação de Bibliotecas:** Use apenas os métodos documentados mais recentes do `langgraph`.
 3. **Modularidade:** Nunca me dê um arquivo monolítico de 500 linhas. Separe os grafos, os nós e as ferramentas de RAG em módulos (ex: `/nodes/router.py`, `/graphs/main_graph.py`).
 4. **Resolução de Dores:** Lembre-se sempre que a prioridade é a precisão da resposta (para fortalecer a confiança da agência) e a eficiência do código.
+
+## graphify
+
+This project has a graphify knowledge graph at graphify-out/.
+
+Rules:
+- Before answering architecture or codebase questions, read graphify-out/GRAPH_REPORT.md for god nodes and community structure
+- If graphify-out/wiki/index.md exists, navigate it instead of reading raw files
+- After modifying code files in this session, run `graphify update .` to keep the graph current (AST-only, no API cost)
