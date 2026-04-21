@@ -15,17 +15,27 @@ Toda a lógica deve ser construída orientada a Grafos de Estado.
 
 ### 3.1. Definição do Estado (`AgentState`)
 O estado global que transita entre os nós deve conter estritamente:
-- `user_query` (str): A pergunta original (ex: "Qual a taxa do Pronaf?").
-- `metadata` (dict): Informações da requisição (agência, perfil).
-- `classified_domain` (str): O destino (AGRO, PF, PJ, OFF_TOPIC).
-- `retrieved_context` (str): O texto extraído do RAG.
-- `final_answer` (str): A resposta a ser devolvida à agência.
+- `question` (str): A pergunta original e bruta do gerente (imutável — preservada para auditoria).
+- `structured_query` (str): Versão técnica e completa da pergunta, gerada pelo `router_node` via query rewriting.
+- `domain` (str): O destino (AGRO, PF, PJ).
+- `context` (str): O texto normativo recuperado do RAG (arquivos `.md`).
+- `generation` (str): A resposta a ser devolvida à agência.
 
 ### 3.2. Nós (Nodes)
-- `Router_Node`: Otimizador e classificador. Usa LLM rápido. Retorna JSON estruturado. **Não consulta o banco vetorial**.
-- `Agro_Specialist_Node`: Recebe a *query*, faz RAG nas normativas rurais, gera resposta técnica.
-- `PF_Specialist_Node`: Especialista em crédito pessoal, veículos, cartões.
-- `PJ_Specialist_Node`: Especialista em capital de giro, recebíveis.
+- `Router_Node`: **Dupla responsabilidade** — classifica o domínio E reformula a pergunta bruta em `structured_query` técnica e completa. Usa LLM com `with_structured_output`. **Não consulta o banco vetorial**. Esta etapa é obrigatória e garante que uma única chamada ao especialista seja suficiente para resposta precisa — evitando retries por input ambíguo.
+- `Agro_Specialist_Node`: Recebe `structured_query` (não o input bruto), carrega contexto de `normativos/agro/*.md`, gera resposta técnica.
+- `PF_Specialist_Node`: Idem para `normativos/pf/*.md` — crédito pessoal, veículos, cartões.
+- `PJ_Specialist_Node`: Idem para `normativos/pj/*.md` — capital de giro, recebíveis.
+
+### 3.2.1. Diretriz: Query Rewriting é obrigatório
+O `router_node` sempre deve receber o input bruto e produzir uma `structured_query` completa antes de encaminhar. Perguntas malfeitas (`"e o trator?"`, `"carência?"`) devem ser expandidas para queries técnicas explícitas. Isso garante precisão na primeira chamada e elimina a necessidade de interação extra com o gerente.
+
+### 3.2.2. Diretriz: RAG via Markdown (Fase 2)
+Os nós especialistas carregam contexto normativo de arquivos `.md` organizados por domínio (`normativos/agro/`, `normativos/pf/`, `normativos/pj/`). O carregamento ocorre **uma vez** no `make_*_node(llm)` e é fechado no closure — zero I/O por requisição. Máximo 2–3 arquivos por pasta no MVP para performance aceitável com Ollama local.
+
+### 3.2.3. Diretriz: Ambiente vs. Produção
+- **Desenvolvimento/testes:** Ollama + `qwen2.5:7b` local (PC RTX 4060, `OLLAMA_BASE_URL` no `.env`).
+- **Produção:** Provider externo de baixa latência (Groq, Claude Haiku ou similar) para TTFT aceitável em atendimento real. A troca é feita em uma linha — nenhum nó conhece o provider.
 
 ### 3.3. Arestas e Fluxo (Edges)
 1. `START` -> `Router_Node`
