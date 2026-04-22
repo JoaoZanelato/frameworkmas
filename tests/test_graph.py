@@ -32,6 +32,10 @@ def test_route_to_specialist_returns_pj_node():
     assert route_to_specialist(_state("PJ")) == "pj_node"
 
 
+def test_route_to_specialist_returns_campanhas_node():
+    assert route_to_specialist(_state("CAMPANHAS")) == "campanhas_node"
+
+
 def test_route_to_specialist_unknown_domain_defaults_to_pj_node():
     assert route_to_specialist(_state("DESCONHECIDO")) == "pj_node"
 
@@ -92,3 +96,20 @@ def test_graph_routes_pj_question_end_to_end():
     assert final["structured_query"] == sq
     assert "capital de giro" in final["context"].lower()
     assert final["generation"] == "Capital de giro em até 24 meses."
+
+
+def test_graph_routes_campanhas_question_end_to_end():
+    mock_llm = MagicMock()
+    mock_structured = MagicMock()
+    sq = "Quais as regras e benefícios da Campanha Movimentação do Bem da Sicredi?"
+    mock_structured.invoke.return_value = RouterOutput(domain="CAMPANHAS", structured_query=sq)
+    mock_llm.with_structured_output.return_value = mock_structured
+    mock_llm.invoke.return_value = AIMessage(content="A campanha acumula até 500 pontos por mês.")
+
+    graph = build_graph(llm=mock_llm)
+    final = graph.invoke(_initial_state("Como funciona a campanha do bem?"))
+
+    assert final["domain"] == "CAMPANHAS"
+    assert final["structured_query"] == sq
+    assert "movimentação" in final["context"].lower() or "campanha" in final["context"].lower()
+    assert final["generation"] == "A campanha acumula até 500 pontos por mês."

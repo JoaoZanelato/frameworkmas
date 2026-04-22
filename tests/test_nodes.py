@@ -5,6 +5,7 @@ from nodes.router import make_router_node
 from nodes.agro import make_agro_node
 from nodes.pf import make_pf_node
 from nodes.pj import make_pj_node
+from nodes.campanhas import make_campanhas_node
 
 
 def _base_state(question: str = "Teste", structured_query: str = "Query técnica de teste.", domain: str = "") -> AgentState:
@@ -132,6 +133,42 @@ def test_specialist_node_uses_structured_query_not_raw_question():
         question="e o trator?",
         structured_query="Qual a carência e taxa para financiamento de tratores via Pronaf Mais Alimentos?",
         domain="AGRO",
+    )
+    node(state)
+
+    call_args = mock_llm.invoke.call_args[0][0]
+    human_message_content = call_args[1].content
+    assert human_message_content == state["structured_query"]
+    assert human_message_content != state["question"]
+
+
+# ── Campanhas ────────────────────────────────────────────────────────────────
+
+def test_campanhas_node_sets_context_and_generation():
+    mock_llm = MagicMock()
+    mock_llm.invoke.return_value = AIMessage(content="A campanha acumula até 500 pontos por mês.")
+
+    node = make_campanhas_node(mock_llm)
+    result = node(_base_state(
+        question="Como funciona a campanha do bem?",
+        structured_query="Quais as regras e benefícios da Campanha Movimentação do Bem da Sicredi?",
+        domain="CAMPANHAS",
+    ))
+
+    assert "movimentação" in result["context"].lower() or "campanha" in result["context"].lower()
+    assert result["generation"] == "A campanha acumula até 500 pontos por mês."
+
+
+def test_campanhas_node_uses_structured_query_not_raw_question():
+    """O nó campanhas deve passar structured_query ao LLM, não question."""
+    mock_llm = MagicMock()
+    mock_llm.invoke.return_value = AIMessage(content="Resposta técnica sobre campanha.")
+
+    node = make_campanhas_node(mock_llm)
+    state = _base_state(
+        question="e o bem?",
+        structured_query="Quais as regras e benefícios da Campanha Movimentação do Bem da Sicredi?",
+        domain="CAMPANHAS",
     )
     node(state)
 
