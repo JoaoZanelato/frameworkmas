@@ -37,8 +37,8 @@ def run(question: str, use_stub: bool = False) -> None:
     final_state: AgentState = graph.invoke(initial_state)
 
     print(f"DOMÍNIO           : {final_state['domain']}")
-    print(f"STRUCTURED QUERY  : {final_state['structured_query'][:80]}...")
-    print(f"CONTEXTO (trecho) : {final_state['context'][:80]}...")
+    print(f"\nSTRUCTURED QUERY  :\n{final_state['structured_query']}")
+    print(f"\nCONTEXTO (RAG)    :\n{final_state['context']}")
     print("-" * 60)
     print(f"RESPOSTA FINAL:\n{final_state['generation']}")
     print("=" * 60)
