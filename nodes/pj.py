@@ -1,32 +1,39 @@
+from pathlib import Path
 from typing import Callable
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import HumanMessage, SystemMessage
 from state import AgentState
 
-_PJ_CONTEXT = (
-    "Normativa PJ: Capital de giro para empresas associadas pode ser contratado "
-    "com prazo de até 24 meses, garantia de recebíveis e taxa a partir de 1,8% a.m. "
-    "Antecipação de recebíveis tem prazo máximo de 180 dias e taxa de 1,5% a.m."
-)
+_NORMATIVOS_DIR = Path(__file__).parent.parent / "normativos" / "pj"
 
 _PJ_SYSTEM_PROMPT = (
     "Você é um especialista em crédito para pessoa jurídica da cooperativa. "
     "Use SOMENTE o contexto normativo abaixo para responder ao gerente. "
-    "Seja objetivo e cite os valores exatos.\n\nContexto: {context}"
+    "Seja objetivo, cite os valores exatos e referencie o normativo aplicável.\n\n"
+    "Contexto:\n{context}"
 )
 
 
+def _load_context() -> str:
+    """Carrega todos os .md do diretório pj em uma única string (uma vez no make_*_node)."""
+    parts = []
+    for md_file in sorted(_NORMATIVOS_DIR.glob("*.md")):
+        parts.append(md_file.read_text(encoding="utf-8"))
+    return "\n\n---\n\n".join(parts)
+
+
 def make_pj_node(llm: BaseChatModel) -> Callable[[AgentState], dict]:
-    """Fábrica do nó especialista em crédito empresarial (PJ)."""
+    """Fábrica do nó especialista em crédito empresarial (PJ). Contexto carregado uma vez no closure."""
+    context = _load_context()
 
     def pj_node(state: AgentState) -> dict:
         messages = [
-            SystemMessage(content=_PJ_SYSTEM_PROMPT.format(context=_PJ_CONTEXT)),
-            HumanMessage(content=state["question"]),
+            SystemMessage(content=_PJ_SYSTEM_PROMPT.format(context=context)),
+            HumanMessage(content=state["structured_query"]),
         ]
         response = llm.invoke(messages)
         return {
-            "context": _PJ_CONTEXT,
+            "context": context,
             "generation": response.content,
         }
 
