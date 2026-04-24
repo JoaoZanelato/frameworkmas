@@ -37,7 +37,7 @@ O FrameworkMAS é um **agente de IA local** que atua como Tier 0 de suporte. O g
 
 ### Princípios de Design
 
-- **Privacidade total:** toda inferência ocorre localmente (Ollama); nenhum normativo trafega para a internet.
+- **Privacidade por design:** a arquitetura suporta inferência 100% local (Ollama em servidor interno) ou via API de mercado homologada — a decisão é operacional e não altera nenhum nó do sistema.
 - **Precisão na primeira resposta:** o `router_node` reformula a pergunta bruta em uma query técnica completa antes de despachar para o especialista, eliminando a necessidade de interação extra.
 - **Arquitetura modular:** cada domínio de conhecimento (AGRO, PF, PJ, CAMPANHAS) é um nó independente. Novos domínios são adicionados sem alterar os existentes.
 - **Agnóstico a modelos:** a troca de Ollama para Groq, Claude ou qualquer outro provider é feita em uma linha, sem alterar nenhum nó.
@@ -94,9 +94,16 @@ Cada especialista recebe a `structured_query` (não o input bruto), carrega o co
 | Testes | pytest + MagicMock | 8.0.0 | 100% isolados, sem chamadas reais ao LLM; runtime < 1s |
 | Python | 3.11+ | — | Type hints modernos; `X \| Y` union syntax; compatível com todas as dependências |
 
-### Por que Ollama e não uma API de nuvem?
+### Motor de IA — Opções Suportadas
 
-A cooperativa possui normativos internos que **não podem trafegar para servidores externos** por razões de sigilo institucional. Ollama executa o modelo inteiramente na rede interna — no MVP em um PC com GPU RTX 4060 acessado via rede local, e em produção no servidor `cas` da cooperativa.
+O sistema é agnóstico ao provider de LLM. Duas rotas são viáveis e a decisão depende de orçamento e política institucional:
+
+| Opção | Provider | Custo recorrente | Privacidade | Prazo |
+|---|---|---|---|---|
+| **Infra local** | Ollama + GPU interna | Zero | Normativos 100% internos | Requer aquisição de hardware |
+| **API de mercado** | Groq, Claude Haiku, OpenAI | Por uso (tokens) | Dados trafegam externamente | Pronto para uso imediato |
+
+Em ambos os casos, a troca é feita em uma linha — nenhum nó especialista conhece o provider.
 
 ### Por que LangGraph e não um simples `if/else`?
 
@@ -809,7 +816,13 @@ curl http://192.168.0.200:11434/api/tags
 
 ## 16. Roadmap
 
-### Fase 3 — Vector Store (próxima)
+### ✅ Fase 3 — Domínio CAMPANHAS (concluída)
+
+- Quarto nó especialista: campanhas sazonais, capitalização, consórcio
+- Base normativa: `normativos/campanhas/`
+- 23/23 testes passando
+
+### Fase 4 — Vector Store
 
 Substituir o RAG via Markdown por busca semântica real. Apenas `_load_context()` muda — a interface dos nós permanece idêntica.
 
@@ -821,9 +834,9 @@ Substituir o RAG via Markdown por busca semântica real. Apenas `_load_context()
 | Retrieval | Top-k (k=3–5) chunks mais similares à `structured_query` |
 | Reindexação | Script para reindexar automaticamente ao detectar mudanças nos `.md` |
 
-### Fase 4 — API HTTP
+### Fase 5 — API HTTP (DevConsole)
 
-Expor o motor de inferência via FastAPI para integração com o DevConsole (sistema Sicredi).
+Expor o motor de inferência via FastAPI para integração com o DevConsole da Sicredi.
 
 ```
 POST /query
@@ -831,12 +844,12 @@ Body: { "question": "Qual a carência do Pronaf?" }
 Response: { "domain": "AGRO", "structured_query": "...", "generation": "..." }
 ```
 
-### Fase 5 — Deploy Interno
+### Fase 6 — Deploy em Produção
 
 | Item | Descrição |
 |---|---|
 | Servidor | `cas` / `devconsole` interno da cooperativa |
-| LLM | Ollama com `qwen2.5:7b` ou `llama3.2:3b` no servidor com GPU |
+| LLM | Infra local (Ollama com GPU interna) ou API de mercado homologada — a definir |
 | Persistência | Histórico de conversas por agência para auditoria e melhoria contínua |
 | Monitoramento | Logging estruturado de `question`, `domain`, `structured_query` e latência |
 
